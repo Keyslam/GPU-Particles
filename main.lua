@@ -2,39 +2,38 @@ love.graphics.setDefaultFilter("nearest", "nearest")
 love.graphics.setPointSize(2)
 
 local _WIDTH, _HEIGHT = love.graphics.getDimensions()
-local Data_texture_size = 16
+local Data_texture_size = 64
 
 local SetColor = love.graphics.newShader("setColor.glsl")
 local Render = love.graphics.newShader("render.glsl")
 local Physics = love.graphics.newShader("physics.glsl")
 
+local tl = {0, 0, 0, 0}
+local tr = {0, 0, 1, 0}
+local bl = {0, 0, 0, 1}
+local br = {0, 0, 1, 1}
+
 local buffer = {}
-for i = 0, Data_texture_size * Data_texture_size * 6 - 1 do
-   local j = i % 6 + 1
+local map = {}
 
-   local vert = {0, 0, 0, 0}
+for particle = 1, Data_texture_size * Data_texture_size do
+   for vertex = 1, 4 do
+      local vertexData = vertex == 1 and tl or
+                         vertex == 2 and tr or
+                         vertex == 3 and bl or
+                         vertex == 4 and br
 
-   if j == 1 then
-      vert[3] = 0
-      vert[4] = 0
-   elseif j == 2 then
-      vert[3] = 1
-      vert[4] = 0
-   elseif j == 3 then
-      vert[3] = 1
-      vert[4] = 1
-   elseif j == 4 then
-      vert[3] = 0
-      vert[4] = 0
-   elseif j == 5 then
-      vert[3] = 0
-      vert[4] = 1
-   elseif j == 6 then
-      vert[3] = 1
-      vert[4] = 1
+      buffer[#buffer + 1] = vertexData
    end
 
-   buffer[i + 1] = vert
+   local offset = (particle - 1) * 4
+
+   map[#map + 1] = 1 + offset
+   map[#map + 1] = 2 + offset
+   map[#map + 1] = 4 + offset
+   map[#map + 1] = 1 + offset
+   map[#map + 1] = 3 + offset
+   map[#map + 1] = 4 + offset
 end
 
 local Image = love.graphics.newImage("timticle.png")
@@ -42,7 +41,8 @@ local Image = love.graphics.newImage("timticle.png")
 local Particle_mesh = love.graphics.newMesh({
    {"VertexPosition", "float", 2},
    {"VertexTexCoord", "float", 2},
-}, buffer, "triangles")
+}, buffer, "triangles", "static")
+Particle_mesh:setVertexMap(map)
 
 Particle_mesh:setTexture(Image)
 
@@ -54,7 +54,7 @@ local Dummy_mesh = love.graphics.newMesh({
    {Data_texture_size, 0, 1, 0},
    {0, Data_texture_size, 0, 1},
    {Data_texture_size, Data_texture_size, 1, 1},
-}, "triangles", "static")
+}, "strip", "static")
 
 
 local Transform_front = love.graphics.newCanvas(Data_texture_size, Data_texture_size, {format = "rgba32f"})
