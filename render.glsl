@@ -2,7 +2,7 @@
 
 #ifdef VERTEX
 
-#define DATA_TEXTURE_SIZE 64.0f
+#define DATA_TEXTURE_SIZE 256.0f
 
 uniform sampler2D transform_texture;
 uniform sampler2D lifetime_texture;
@@ -28,7 +28,7 @@ vec4 position(mat4 transform, vec4 position) {
    float v = lifetime_sample.r / lifetime;
    particle_color = vec4(1.0f, 1.0f, 1.0f, 1.0f - v);
  
-   position.xy += VertexTexCoord.xy * 80;
+   position.xy += VertexTexCoord.xy * 20;
 
    return transform * position;
 }

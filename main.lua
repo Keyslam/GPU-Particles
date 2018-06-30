@@ -1,31 +1,52 @@
 love.graphics.setDefaultFilter("nearest", "nearest")
 love.graphics.setPointSize(2)
 
-local _WIDTH, _HEIGHT = love.graphics.getDimensions()
-local Data_texture_size = 64
+local Ffi = require("ffi")
 
 local SetColor = love.graphics.newShader("setColor.glsl")
-local Render = love.graphics.newShader("render.glsl")
-local Physics = love.graphics.newShader("physics.glsl")
+local Render   = love.graphics.newShader("render.glsl")
+local Physics  = love.graphics.newShader("physics.glsl")
 
-local tl = {0, 0, 0, 0}
-local tr = {0, 0, 1, 0}
-local bl = {0, 0, 0, 1}
-local br = {0, 0, 1, 1}
+local _WIDTH, _HEIGHT = love.graphics.getDimensions()
+local Data_texture_size = 256
+local vertexCount = Data_texture_size * Data_texture_size * 4
 
-local buffer = {}
+Ffi.cdef[[
+   typedef struct {
+      float x, y;
+      float u, v;
+   } fm_vertex;
+]]
+
+local vertexSize  = Ffi.sizeof("fm_vertex")
+local vertexCountPer = 32 * 32
+local memoryUsage = vertexCount * vertexSize
+
+local byteData = love.data.newByteData(memoryUsage)
+local data = Ffi.cast("fm_vertex*", byteData:getPointer())
+
+for vertex = 0, vertexCountPer - 1 do
+   local vertexPointer = data[vertex]
+
+   local i = vertex % 4
+   if i == 0 then
+      vertexPointer.u = 0
+      vertexPointer.v = 0
+   elseif i == 1 then
+      vertexPointer.u = 1
+      vertexPointer.v = 0
+   elseif i == 2 then
+      vertexPointer.u = 0
+      vertexPointer.v = 1
+   elseif i == 3 then
+      vertexPointer.u = 1
+      vertexPointer.v = 1
+   end
+end
+
 local map = {}
 
 for particle = 1, Data_texture_size * Data_texture_size do
-   for vertex = 1, 4 do
-      local vertexData = vertex == 1 and tl or
-                         vertex == 2 and tr or
-                         vertex == 3 and bl or
-                         vertex == 4 and br
-
-      buffer[#buffer + 1] = vertexData
-   end
-
    local offset = (particle - 1) * 4
 
    map[#map + 1] = 1 + offset
@@ -36,15 +57,18 @@ for particle = 1, Data_texture_size * Data_texture_size do
    map[#map + 1] = 4 + offset
 end
 
-local Image = love.graphics.newImage("timticle.png")
-
 local Particle_mesh = love.graphics.newMesh({
    {"VertexPosition", "float", 2},
    {"VertexTexCoord", "float", 2},
-}, buffer, "triangles", "static")
-Particle_mesh:setVertexMap(map)
+}, vertexCount, "triangles", "static")
 
-Particle_mesh:setTexture(Image)
+Particle_mesh:setVertexMap(map)
+Particle_mesh:setTexture(love.graphics.newImage("timticle.png"))
+
+for i = 0, vertexCount / vertexCountPer - 1 do
+   print(i)
+   Particle_mesh:setVertices(byteData, i * vertexCountPer + 1)
+end
 
 local Dummy_mesh = love.graphics.newMesh({
    {0, 0, 0, 0},
@@ -55,7 +79,6 @@ local Dummy_mesh = love.graphics.newMesh({
    {0, Data_texture_size, 0, 1},
    {Data_texture_size, Data_texture_size, 1, 1},
 }, "strip", "static")
-
 
 local Transform_front = love.graphics.newCanvas(Data_texture_size, Data_texture_size, {format = "rgba32f"})
 local Transform_back  = love.graphics.newCanvas(Data_texture_size, Data_texture_size, {format = "rgba32f"})
