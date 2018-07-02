@@ -8,8 +8,11 @@ local Render   = love.graphics.newShader("render.glsl")
 local Physics  = love.graphics.newShader("physics.glsl")
 
 local _WIDTH, _HEIGHT = love.graphics.getDimensions()
-local Data_texture_size = 256
-local vertexCount = Data_texture_size * Data_texture_size * 4
+
+local particleCount = 128
+local vertexCount   = particleCount * 6
+local dataSize      = math.sqrt(vertexCount)
+
 
 Ffi.cdef[[
    typedef struct {
@@ -19,56 +22,23 @@ Ffi.cdef[[
 ]]
 
 local vertexSize  = Ffi.sizeof("fm_vertex")
-local vertexCountPer = 32 * 32
 local memoryUsage = vertexCount * vertexSize
 
 local byteData = love.data.newByteData(memoryUsage)
-local data = Ffi.cast("fm_vertex*", byteData:getPointer())
+local data     = Ffi.cast("fm_vertex*", byteData:getPointer())
 
-for vertex = 0, vertexCountPer - 1 do
+for vertex = 0, vertexCount - 1 do
    local vertexPointer = data[vertex]
 
-   local i = vertex % 4
-   if i == 0 then
-      vertexPointer.u = 0
-      vertexPointer.v = 0
-   elseif i == 1 then
-      vertexPointer.u = 1
-      vertexPointer.v = 0
-   elseif i == 2 then
-      vertexPointer.u = 0
-      vertexPointer.v = 1
-   elseif i == 3 then
-      vertexPointer.u = 1
-      vertexPointer.v = 1
-   end
-end
-
-local map = {}
-
-for particle = 1, Data_texture_size * Data_texture_size do
-   local offset = (particle - 1) * 4
-
-   map[#map + 1] = 1 + offset
-   map[#map + 1] = 2 + offset
-   map[#map + 1] = 4 + offset
-   map[#map + 1] = 1 + offset
-   map[#map + 1] = 3 + offset
-   map[#map + 1] = 4 + offset
+   vertexPointer.u = (vertex == 1 or vertex == 3) and 1 or 0
+   vertexPointer.v = (vertex == 2 or vertex == 3) and 1 or 0
 end
 
 local Particle_mesh = love.graphics.newMesh({
    {"VertexPosition", "float", 2},
    {"VertexTexCoord", "float", 2},
-}, vertexCount, "triangles", "static")
-
-Particle_mesh:setVertexMap(map)
+}, byteData, "triangles", "static")
 Particle_mesh:setTexture(love.graphics.newImage("timticle.png"))
-
-for i = 0, vertexCount / vertexCountPer - 1 do
-   print(i)
-   Particle_mesh:setVertices(byteData, i * vertexCountPer + 1)
-end
 
 local Dummy_mesh = love.graphics.newMesh({
    {0, 0, 0, 0},
@@ -140,6 +110,6 @@ function love.draw()
    Render:send("transform_texture", Transform_back)
    Render:send("lifetime_texture", Lifetime_back)
    love.graphics.setShader(Render)
-      love.graphics.draw(Particle_mesh)
+      love.graphics.drawInstanced(Particle_mesh, 16)
    love.graphics.setShader()
 end

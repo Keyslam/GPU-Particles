@@ -2,7 +2,7 @@
 
 #ifdef VERTEX
 
-#define DATA_TEXTURE_SIZE 256.0f
+#define DATA_TEXTURE_SIZE 16.0f
 
 uniform sampler2D transform_texture;
 uniform sampler2D lifetime_texture;
@@ -12,12 +12,11 @@ uniform float lifetime;
 out vec4 particle_color;
 
 vec4 position(mat4 transform, vec4 position) {
-   int part = gl_VertexID / 4;
-   int vert = gl_VertexID % 4;
+   int particleID = gl_VertexID / 4 * gl_InstanceID;
 
 	vec2 texture_coords = vec2(
-	   mod(part, DATA_TEXTURE_SIZE),
-      floor(part / DATA_TEXTURE_SIZE)
+	   mod(particleID, DATA_TEXTURE_SIZE),
+      floor(particleID / DATA_TEXTURE_SIZE)
    ) / DATA_TEXTURE_SIZE;
 
    vec4 transform_sample = Texel(transform_texture, texture_coords);
